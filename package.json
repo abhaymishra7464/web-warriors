@@ -1,0 +1,21 @@
+{
+  "name": "codiqo",
+  "version": "1.0.0",
+  "description": "Codiqo hackathon starter with Express, EJS, Supabase auth",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon ./app.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "ejs-mate": "^4.0.0",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

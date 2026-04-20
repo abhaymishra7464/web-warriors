@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= pageTitle || 'Codiqo' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/global.css" />
+  <% if (typeof pageCss !== 'undefined' && pageCss) { %>
+    <link rel="stylesheet" href="<%= pageCss %>" />
+  <% } %>
+</head>
+<body>
+  <% if (currentUser) { %>
+    <div class="app-shell with-sidebar">
+      <%- include('../partials/navbar') %>
+      <main class="app-content">
+        <%- body %>
+      </main>
+    </div>
+  <% } else { %>
+    <main>
+      <%- body %>
+    </main>
+  <% } %>
+</body>
+</html>

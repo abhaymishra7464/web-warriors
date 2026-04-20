@@ -1,0 +1,127 @@
+<%
+  layout('layouts/boilerplate');
+%>
+
+<section class="page-stack">
+  <section class="hero-band card-glass compact-hero">
+    <div>
+      <p class="mini-tag">PLANNER BUILDER</p>
+      <h1>Create a DSA planner</h1>
+      <p class="hero-copy">
+        User yaha se predefined roadmap select karega ya custom flow banayega. Jo topics user ko already aate hain,
+        wo hum future AI suggestions aur task ordering me use karenge.
+      </p>
+    </div>
+  </section>
+
+  <section class="planner-layout-grid">
+    <article class="card-glass section-card form-card-large">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Planner form</p>
+          <h2>Build your course</h2>
+        </div>
+      </div>
+
+      <% if (error) { %>
+        <div class="auth-alert dashboard-alert"><%= error %></div>
+      <% } %>
+
+      <form action="/planner/new" method="POST" class="planner-form-grid">
+        <div class="field-group">
+          <label for="profileName">Profile / Course Name</label>
+          <input id="profileName" name="profileName" type="text" value="<%= formData?.profileName || '' %>" placeholder="eg. Abhay DSA Sprint" required>
+        </div>
+
+        <div class="field-grid two-col two-col-dashboard">
+          <div class="field-group">
+            <label for="language">Preferred Language</label>
+            <select id="language" name="language">
+              <% ['Java', 'C++', 'Python', 'JavaScript'].forEach((language) => { %>
+                <option value="<%= language %>" <%= formData?.language === language ? 'selected' : '' %>><%= language %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="currentLevel">Current Level</label>
+            <select id="currentLevel" name="currentLevel">
+              <% ['Beginner', 'Intermediate', 'Advanced'].forEach((level) => { %>
+                <option value="<%= level %>" <%= formData?.currentLevel === level ? 'selected' : '' %>><%= level %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-grid two-col two-col-dashboard">
+          <div class="field-group">
+            <label for="targetDays">Target Days</label>
+            <select id="targetDays" name="targetDays">
+              <% [7, 15, 21, 30, 45].forEach((day) => { %>
+                <option value="<%= day %>" <%= Number(formData?.targetDays) === day ? 'selected' : '' %>><%= day %> Days</option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="startTopic">Start Topic</label>
+            <select id="startTopic" name="startTopic">
+              <% topicLibrary.slice(0, 16).forEach((topic) => { %>
+                <option value="<%= topic.name %>" <%= formData?.startTopic === topic.name ? 'selected' : '' %>><%= topic.name %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="roadmapSlug">Roadmap Template</label>
+          <select id="roadmapSlug" name="roadmapSlug">
+            <% roadmaps.forEach((roadmap) => { %>
+              <option value="<%= roadmap.slug %>" <%= formData?.roadmapSlug === roadmap.slug ? 'selected' : '' %>><%= roadmap.title %> • <%= roadmap.mode %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="knownTopics">Known Topics (comma separated)</label>
+          <textarea id="knownTopics" name="knownTopics" rows="4" placeholder="eg. arrays basics, loops, binary search"><%= formData?.knownTopics || '' %></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="goalNotes">Goal Notes</label>
+          <textarea id="goalNotes" name="goalNotes" rows="4" placeholder="eg. I want easy to medium DSA prep for internships"><%= formData?.goalNotes || '' %></textarea>
+        </div>
+
+        <button type="submit" class="primary-link-btn form-submit-btn">Create planner</button>
+      </form>
+    </article>
+
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">How it will work</p>
+          <h2>Builder logic</h2>
+        </div>
+      </div>
+
+      <div class="logic-list">
+        <div class="logic-item">
+          <h4>1. Planner setup</h4>
+          <p>User chooses roadmap, target days, language and start topic.</p>
+        </div>
+        <div class="logic-item">
+          <h4>2. Auto task generation</h4>
+          <p>Study tasks roadmap tree ke hisab se generate honge.</p>
+        </div>
+        <div class="logic-item">
+          <h4>3. LC practice redirect</h4>
+          <p>Har topic ke liye LeetCode practice link ya question suggestions store kar sakte hain.</p>
+        </div>
+        <div class="logic-item">
+          <h4>4. Future AI adaptation</h4>
+          <p>Mistake logs aur analysis ke baad task order, difficulty aur suggestions change hongi.</p>
+        </div>
+      </div>
+    </article>
+  </section>
+</section>

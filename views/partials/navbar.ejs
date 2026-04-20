@@ -1,0 +1,35 @@
+<aside class="sidebar-shell">
+  <div class="sidebar-top">
+    <a href="/dashboard" class="sidebar-brand">
+      <span class="sidebar-brand-mark">C</span>
+      <div>
+        <p class="sidebar-brand-name">Codiqo</p>
+        <p class="sidebar-brand-subtitle">Adaptive DSA Mentor</p>
+      </div>
+    </a>
+
+    <div class="sidebar-search">
+      <span>⌕</span>
+      <span>Search modules</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <p class="sidebar-group-title">Workspace</p>
+    <a href="/dashboard" class="sidebar-link">Dashboard</a>
+    <a href="/courses" class="sidebar-link">Courses</a>
+    <a href="/planner/new" class="sidebar-link">Create Planner</a>
+    <a href="/analyzer" class="sidebar-link">AI Analyzer</a>
+    <a href="/notes" class="sidebar-link">Notes</a>
+    <a href="/reminders" class="sidebar-link">Reminders</a>
+  </nav>
+
+  <div class="sidebar-status-card">
+    <p class="sidebar-card-tag">Current user</p>
+    <h4><%= currentUser.fullName %></h4>
+    <p class="sidebar-card-copy"><%= currentUser.email %></p>
+    <form action="/logout" method="POST">
+      <button class="sidebar-cta" type="submit">Logout</button>
+    </form>
+  </div>
+</aside>

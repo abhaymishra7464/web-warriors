@@ -1,0 +1,90 @@
+<%
+  layout('layouts/boilerplate', { pageCss: '/css/auth.css' });
+%>
+
+<section class="auth-shell signup-shell">
+  <div class="auth-card">
+    <div class="auth-showcase">
+      <div class="showcase-overlay"></div>
+      <div class="showcase-content">
+        <span class="eyebrow">CODIQO</span>
+        <h1>Get started with a smarter DSA learning journey.</h1>
+        <p>
+          Build your coding system step by step. Learn from mistakes, track patterns,
+          and grow with adaptive guidance.
+        </p>
+
+        <div class="showcase-steps">
+          <div class="step-card active-step">
+            <span class="step-number">1</span>
+            <h3>Create account</h3>
+            <p>Secure access for your learning workspace.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">2</span>
+            <h3>Choose roadmap</h3>
+            <p>Select your pace and DSA direction.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">3</span>
+            <h3>Track growth</h3>
+            <p>Use AI insights and dynamic feedback later.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-panel-inner">
+        <h2>Sign Up Account</h2>
+        <p class="auth-subtitle">Enter your personal data to create your account.</p>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+          <div class="auth-alert"><%= error %></div>
+        <% } %>
+
+        <% if (authMessage) { %>
+          <div class="auth-success"><%= authMessage %></div>
+        <% } %>
+
+        <div class="social-row disabled-socials">
+          <button type="button" class="social-btn" disabled>Google</button>
+          <button type="button" class="social-btn" disabled>GitHub</button>
+        </div>
+
+        <div class="divider">Or</div>
+
+        <form action="/signup" method="POST" class="auth-form">
+          <div class="field-grid two-col">
+            <div class="field-group">
+              <label for="firstName">First Name</label>
+              <input id="firstName" name="firstName" type="text" placeholder="eg. Abhay" value="<%= formData?.firstName || '' %>" required />
+            </div>
+            <div class="field-group">
+              <label for="lastName">Last Name</label>
+              <input id="lastName" name="lastName" type="text" placeholder="eg. Mishra" value="<%= formData?.lastName || '' %>" required />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="eg. abhay@example.com" value="<%= formData?.email || '' %>" required />
+          </div>
+
+          <div class="field-group">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" placeholder="Enter your password" required />
+            <small>Must be at least 6 characters.</small>
+          </div>
+
+          <button class="submit-btn" type="submit">Sign Up</button>
+        </form>
+
+        <p class="auth-switch">
+          Already have an account?
+          <a href="/login">Log In</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

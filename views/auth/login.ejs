@@ -1,0 +1,69 @@
+<%
+  layout('layouts/boilerplate', { pageCss: '/css/auth.css' });
+%>
+
+<section class="auth-shell login-shell">
+  <div class="auth-card">
+    <div class="auth-showcase">
+      <div class="showcase-overlay"></div>
+      <div class="showcase-content">
+        <span class="eyebrow">WELCOME BACK</span>
+        <h1>Learn from mistakes. Adapt your learning.</h1>
+        <p>
+          Enter your account and continue your personalized DSA journey inside Codiqo.
+        </p>
+
+        <div class="showcase-highlight">
+          <div class="highlight-box">
+            <p class="highlight-label">What comes next</p>
+            <h3>Dashboard + roadmap + AI analyzer</h3>
+            <p class="highlight-text">
+              Abhi auth base ready hai. Agle steps me hum pura workflow add karenge.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-panel-inner">
+        <h2>Login Account</h2>
+        <p class="auth-subtitle">Use your email and password to enter your workspace.</p>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+          <div class="auth-alert"><%= error %></div>
+        <% } %>
+
+        <% if (authMessage) { %>
+          <div class="auth-success"><%= authMessage %></div>
+        <% } %>
+
+        <div class="social-row disabled-socials">
+          <button type="button" class="social-btn" disabled>Google</button>
+          <button type="button" class="social-btn" disabled>GitHub</button>
+        </div>
+
+        <div class="divider">Or</div>
+
+        <form action="/login" method="POST" class="auth-form">
+          <div class="field-group">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="eg. abhay@example.com" value="<%= formData?.email || '' %>" required />
+          </div>
+
+          <div class="field-group">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" placeholder="Enter your password" required />
+          </div>
+
+          <button class="submit-btn" type="submit">Login</button>
+        </form>
+
+        <p class="auth-switch">
+          Do not have an account?
+          <a href="/signup">Sign Up</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

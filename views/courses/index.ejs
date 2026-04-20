@@ -1,0 +1,116 @@
+<%
+  layout('layouts/boilerplate');
+%>
+
+<section class="page-stack">
+  <section class="hero-band card-glass compact-hero">
+    <div>
+      <p class="mini-tag">COURSE HUB</p>
+      <h1>Create your DSA course flow</h1>
+      <p class="hero-copy">
+        Yahi se user apna DSA course create karega, predefined roadmap choose karega,
+        ya custom AI-guided planner start karega. Future me naye roadmaps add karne par ye page automatically expand ho sakta hai.
+      </p>
+    </div>
+    <a href="/planner/new" class="primary-link-btn">Create course</a>
+  </section>
+
+  <section class="course-overview-grid">
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Your active planners</p>
+          <h2>Current courses</h2>
+        </div>
+      </div>
+      <% if (activeProfiles.length) { %>
+        <div class="planner-cards">
+          <% activeProfiles.forEach((profile) => { %>
+            <article class="planner-card-mini">
+              <p class="planner-badge"><%= profile.language %> • <%= profile.current_level %></p>
+              <h3><%= profile.profile_name %></h3>
+              <p>Start topic: <%= profile.start_topic_slug || 'Array' %></p>
+              <p>Target days: <%= profile.target_days %></p>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-state-box slim-empty">
+          <h4>No course created yet</h4>
+          <p>Sabse pehle ek DSA planner create karo. Fir yahi se us planner ke topics aur track dikhenge.</p>
+        </div>
+      <% } %>
+    </article>
+
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Topic universe</p>
+          <h2>DSA concept cloud</h2>
+        </div>
+      </div>
+      <div class="topic-cloud">
+        <% topicLibrary.forEach((topic) => { %>
+          <span class="topic-chip"><%= topic.name %> <strong><%= topic.count %></strong></span>
+        <% }) %>
+      </div>
+    </article>
+  </section>
+
+  <section class="section-card card-glass">
+    <div class="section-head">
+      <div>
+        <p class="card-label">Predefined + custom options</p>
+        <h2>Roadmap gallery</h2>
+      </div>
+    </div>
+
+    <div class="roadmap-grid">
+      <% roadmaps.forEach((roadmap) => { %>
+        <article class="roadmap-card">
+          <div class="roadmap-card-top">
+            <span class="roadmap-mode"><%= roadmap.mode %></span>
+            <span class="roadmap-days"><%= roadmap.durationDays %> days</span>
+          </div>
+          <h3><%= roadmap.title %></h3>
+          <p><%= roadmap.description %></p>
+          <div class="milestone-list">
+            <% roadmap.milestones.forEach((point) => { %>
+              <div class="milestone-item">• <%= point %></div>
+            <% }) %>
+          </div>
+          <a href="/planner/new?roadmap=<%= roadmap.slug %>" class="primary-link-btn small-btn">Choose roadmap</a>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="section-card card-glass">
+    <div class="section-head">
+      <div>
+        <p class="card-label">Modern tree preview</p>
+        <h2>Current track node structure</h2>
+      </div>
+    </div>
+
+    <div class="roadmap-tree-grid">
+      <% roadmaps.forEach((roadmap) => { %>
+        <article class="tree-panel">
+          <p class="tree-title"><%= roadmap.title %></p>
+          <div class="tree-flow-stack">
+            <% roadmap.tree.forEach((node) => { %>
+              <div class="tree-node-block">
+                <div class="tree-node-main"><%= node.name %></div>
+                <div class="tree-node-children">
+                  <% node.children.forEach((child) => { %>
+                    <span class="tree-child-pill"><%= child %></span>
+                  <% }) %>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+</section>

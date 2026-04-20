@@ -1,0 +1,32 @@
+<%
+  layout('layouts/boilerplate');
+%>
+
+<section class="page-stack">
+  <section class="hero-band card-glass compact-hero">
+    <div>
+      <p class="mini-tag">NOTES WORKSPACE</p>
+      <h1>Saved learning notes</h1>
+      <p class="hero-copy">AI generated aur manual notes yahi par structured form me rahengi.</p>
+    </div>
+  </section>
+
+  <section class="section-card card-glass">
+    <% if (notes.length) { %>
+      <div class="notes-grid">
+        <% notes.forEach((note) => { %>
+          <article class="note-card">
+            <p class="note-topic"><%= note.topic_name || 'General' %><%= note.subtopic_name ? ` • ${note.subtopic_name}` : '' %></p>
+            <h4><%= note.title %></h4>
+            <p><%= note.content %></p>
+          </article>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state-box">
+        <h4>No notes yet</h4>
+        <p>Analyzer use karoge toh auto notes create hone lagenge.</p>
+      </div>
+    <% } %>
+  </section>
+</section>

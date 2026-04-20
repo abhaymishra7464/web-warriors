@@ -1,0 +1,212 @@
+<%
+  layout('layouts/boilerplate');
+%>
+
+<section class="page-stack">
+  <section class="hero-band card-glass">
+    <div>
+      <p class="mini-tag">ADAPTIVE DASHBOARD</p>
+      <h1>Welcome back, <%= currentUser.fullName.split(' ')[0] %></h1>
+      <p class="hero-copy">
+        Yaha se current planner, weak topics, AI suggestions, reminders aur next LeetCode actions sab ek jagah milenge.
+        Har user ke mistake pattern aur activity ke hisab se blocks future me aur strongly adapt honge.
+      </p>
+    </div>
+    <div class="hero-pills">
+      <span class="stat-pill">Plan: <%= activePlan?.title || 'Not created yet' %></span>
+      <span class="stat-pill">Profile: <%= activeProfile?.profile_name || 'Create your first planner' %></span>
+      <span class="stat-pill">Completion: <%= completionPercent %>%</span>
+      <span class="stat-pill">Weak Topic: <%= analytics.weak_topic || 'Array' %></span>
+    </div>
+  </section>
+
+  <section class="metrics-grid">
+    <article class="metric-card card-glass">
+      <p class="card-label">Current level</p>
+      <h3><%= activeProfile?.current_level || 'No profile yet' %></h3>
+      <p><%= activeProfile?.language || 'Choose language in planner' %></p>
+    </article>
+    <article class="metric-card card-glass">
+      <p class="card-label">Total attempts</p>
+      <h3><%= analytics.total_problems_attempted %></h3>
+      <p>Problems attempted by this user</p>
+    </article>
+    <article class="metric-card card-glass">
+      <p class="card-label">AI analyses</p>
+      <h3><%= analytics.total_analyses %></h3>
+      <p>Analyzer usage count</p>
+    </article>
+    <article class="metric-card card-glass accent-card">
+      <p class="card-label">Current streak</p>
+      <h3><%= analytics.streak_count %> days</h3>
+      <p>Consistency ko yahi se track karenge</p>
+    </article>
+  </section>
+
+  <section class="dashboard-grid-2">
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Today tasks</p>
+          <h2>Current track</h2>
+        </div>
+        <a href="/planner/new" class="text-link">Create / update planner</a>
+      </div>
+
+      <% if (todayTasks.length) { %>
+        <div class="task-list">
+          <% todayTasks.forEach((task) => { %>
+            <article class="task-item">
+              <div>
+                <p class="task-day">Day <%= task.day_number %></p>
+                <h4><%= task.task_title %></h4>
+                <p><%= task.topic_name %> • <%= task.subtopic_name %></p>
+              </div>
+              <div class="task-actions">
+                <span class="status-chip <%= task.status === 'completed' ? 'done' : 'pending' %>"><%= task.status %></span>
+                <% if (task.problem_ref) { %>
+                  <a href="<%= task.problem_ref %>" target="_blank" rel="noreferrer" class="task-link">Open practice</a>
+                <% } %>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-state-box">
+          <h4>No active tasks yet</h4>
+          <p>Sabse pehle DSA planner create karo. Uske baad yahi par user ke day-wise tasks dikhne lagenge.</p>
+          <a href="/planner/new" class="primary-link-btn">Create first planner</a>
+        </div>
+      <% } %>
+    </article>
+
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">AI suggestions</p>
+          <h2>Next actions for you</h2>
+        </div>
+        <a href="/analyzer" class="text-link">Open analyzer</a>
+      </div>
+
+      <div class="logic-list">
+        <% smartSuggestions.actionCards.forEach((card) => { %>
+          <div class="logic-item">
+            <h4><%= card.title %></h4>
+            <p><%= card.text %></p>
+          </div>
+        <% }) %>
+      </div>
+    </article>
+  </section>
+
+  <section class="dashboard-grid-2">
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Recent mistakes</p>
+          <h2>AI memory feed</h2>
+        </div>
+        <a href="/analyzer" class="text-link">Open analyzer</a>
+      </div>
+
+      <% if (recentMistakes.length) { %>
+        <div class="feed-list">
+          <% recentMistakes.forEach((item) => { %>
+            <article class="feed-item">
+              <div>
+                <h4><%= item.mistake_title %></h4>
+                <p><%= item.topic_name || 'Topic pending' %> • <%= item.subtopic_name || 'Subtopic pending' %></p>
+              </div>
+              <span class="severity-badge"><%= item.severity || 'medium' %></span>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-mini">
+          <h4>No mistake logs yet</h4>
+          <p>Analyzer se code submit karne ke baad repeated mistakes yaha aayengi.</p>
+        </div>
+      <% } %>
+    </article>
+
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Suggested questions</p>
+          <h2><%= smartSuggestions.targetTopic %> practice set</h2>
+        </div>
+      </div>
+
+      <div class="feed-list">
+        <% smartSuggestions.nextQuestions.forEach((question) => { %>
+          <article class="feed-item">
+            <div>
+              <h4><%= question.title %></h4>
+              <p>#<%= question.id %> • <%= question.difficulty %></p>
+            </div>
+            <a href="<%= question.url %>" target="_blank" rel="noreferrer" class="task-link">Open LC</a>
+          </article>
+        <% }) %>
+      </div>
+    </article>
+  </section>
+
+  <section class="dashboard-grid-2 lower-grid">
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Pinned notes</p>
+          <h2>Learning memory</h2>
+        </div>
+        <a href="/notes" class="text-link">View notes</a>
+      </div>
+
+      <% if (notePreview.length) { %>
+        <div class="notes-grid">
+          <% notePreview.forEach((note) => { %>
+            <article class="note-card">
+              <p class="note-topic"><%= note.topic_name || 'General' %></p>
+              <h4><%= note.title %></h4>
+              <p><%= note.content.slice(0, 120) %><%= note.content.length > 120 ? '...' : '' %></p>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-mini">
+          <h4>No notes yet</h4>
+          <p>Planner aur analyzer ke baad smart notes yaha store hongi.</p>
+        </div>
+      <% } %>
+    </article>
+
+    <article class="card-glass section-card">
+      <div class="section-head">
+        <div>
+          <p class="card-label">Reminders</p>
+          <h2>What should you revisit</h2>
+        </div>
+        <a href="/reminders" class="text-link">Open reminders</a>
+      </div>
+
+      <% if (reminders.length) { %>
+        <div class="feed-list">
+          <% reminders.forEach((item) => { %>
+            <article class="feed-item">
+              <div>
+                <h4><%= item.title %></h4>
+                <p><%= item.message %></p>
+              </div>
+              <span class="status-chip pending"><%= item.status %></span>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-mini">
+          <h4>No reminders yet</h4>
+          <p>Analyzer aur planner activity ke baad smart reminders yahi se trigger honge.</p>
+        </div>
+      <% } %>
+    </article>
+  </section>
+</section>
