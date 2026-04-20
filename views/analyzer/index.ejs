@@ -2,6 +2,47 @@
   layout('layouts/boilerplate');
 %>
 
+<%
+  const safeStarterQuestions =
+    typeof starterQuestions !== 'undefined' && Array.isArray(starterQuestions)
+      ? starterQuestions
+      : [];
+
+  const safeResult =
+    typeof result !== 'undefined' && result
+      ? result
+      : null;
+
+  const safeFormData =
+    typeof formData !== 'undefined' && formData
+      ? formData
+      : {};
+
+  const safeImprovementTips =
+    safeResult && Array.isArray(safeResult.improvement_tips)
+      ? safeResult.improvement_tips
+      : [];
+
+  const safeMistakes =
+    safeResult && Array.isArray(safeResult.mistakes)
+      ? safeResult.mistakes
+      : [];
+
+  const safeNextQuestions =
+    safeResult &&
+    safeResult.smartSuggestions &&
+    Array.isArray(safeResult.smartSuggestions.nextQuestions)
+      ? safeResult.smartSuggestions.nextQuestions
+      : [];
+
+  const safeActionCards =
+    safeResult &&
+    safeResult.smartSuggestions &&
+    Array.isArray(safeResult.smartSuggestions.actionCards)
+      ? safeResult.smartSuggestions.actionCards
+      : [];
+%>
+
 <section class="page-stack">
   <section class="hero-band card-glass compact-hero">
     <div>
@@ -31,47 +72,56 @@
         <div class="field-grid two-col two-col-dashboard">
           <div class="field-group">
             <label for="platform">Platform</label>
-            <select id="platform" name="platform">
-              <option value="LeetCode" <%= formData.platform === 'LeetCode' ? 'selected' : '' %>>LeetCode</option>
-              <option value="Codeforces" <%= formData.platform === 'Codeforces' ? 'selected' : '' %>>Codeforces</option>
-              <option value="Custom Question" <%= formData.platform === 'Custom Question' ? 'selected' : '' %>>Custom Question</option>
-            </select>
+            <input
+              id="platform"
+              name="platform"
+              type="text"
+              value="<%= safeFormData.platform || 'LeetCode' %>"
+              readonly
+            />
           </div>
-          <div class="field-group">
-            <label for="questionId">Question ID / Slug</label>
-            <input id="questionId" name="questionId" type="text" placeholder="eg. 1 / two-sum" value="<%= formData.questionId || '' %>">
-          </div>
-        </div>
 
-        <div class="field-grid two-col two-col-dashboard">
           <div class="field-group">
-            <label for="problemTitle">Problem Title</label>
-            <input id="problemTitle" name="problemTitle" type="text" placeholder="eg. Two Sum" value="<%= formData.problemTitle || '' %>">
-          </div>
-          <div class="field-group">
-            <label for="topicName">Topic</label>
-            <input id="topicName" name="topicName" type="text" placeholder="eg. Array" value="<%= formData.topicName || '' %>">
+            <label for="questionId">LeetCode Question No.</label>
+            <input
+              id="questionId"
+              name="questionId"
+              type="text"
+              placeholder="eg. 121"
+              value="<%= safeFormData.questionId || '' %>"
+              required
+            />
           </div>
         </div>
 
         <div class="field-grid two-col two-col-dashboard">
           <div class="field-group">
             <label for="language">Language</label>
-            <select id="language" name="language">
+            <select id="language" name="language" required>
               <% ['Java', 'C++', 'Python', 'JavaScript'].forEach((lang) => { %>
-                <option value="<%= lang %>" <%= formData.language === lang ? 'selected' : '' %>><%= lang %></option>
+                <option value="<%= lang %>" <%= safeFormData.language === lang ? 'selected' : '' %>><%= lang %></option>
               <% }) %>
             </select>
           </div>
+
           <div class="field-group">
             <label>Quick tip</label>
-            <div class="inline-help">Question number aur code enough hai. AI baki context infer karne ki koshish karega.</div>
+            <div class="inline-help">
+              Bas question number aur code enough hai. AI us question ke logic, mistakes,
+              learned concepts, aur next similar questions suggest karega.
+            </div>
           </div>
         </div>
 
         <div class="field-group">
           <label for="code">Paste your solution</label>
-          <textarea id="code" name="code" rows="16" placeholder="Paste your code here"><%= formData.code || '' %></textarea>
+          <textarea
+            id="code"
+            name="code"
+            rows="16"
+            placeholder="Paste your code here"
+            required
+          ><%= safeFormData.code || '' %></textarea>
         </div>
 
         <button type="submit" class="primary-link-btn form-submit-btn">Analyze with AI</button>
@@ -86,15 +136,24 @@
         </div>
       </div>
 
-      <% if (starterQuestions?.length) { %>
+      <% if (safeStarterQuestions.length) { %>
         <div class="feed-list">
-          <% starterQuestions.forEach((question) => { %>
+          <% safeStarterQuestions.forEach((question) => { %>
             <article class="feed-item">
-              <div>
+              <div class="feed-item-top">
                 <h4><%= question.title %></h4>
-                <p>#<%= question.id %> • <%= question.difficulty %></p>
+                <% if (question.difficulty) { %>
+                  <span class="badge"><%= question.difficulty %></span>
+                <% } %>
               </div>
-              <a href="<%= question.url %>" target="_blank" rel="noreferrer" class="task-link">Open LC</a>
+
+              <% if (question.reason) { %>
+                <p><%= question.reason %></p>
+              <% } %>
+
+              <% if (question.url) { %>
+                <a href="<%= question.url %>" target="_blank" rel="noopener noreferrer">Open Question</a>
+              <% } %>
             </article>
           <% }) %>
         </div>
@@ -107,35 +166,54 @@
     </article>
   </section>
 
-  <% if (result) { %>
+  <% if (safeResult && safeResult.isCorrectCode) { %>
+    <div class="auth-success dashboard-alert">
+      Code correct hai — learned concepts notes automatically save ho gaye.
+    </div>
+  <% } else if (safeResult && safeMistakes.length) { %>
+    <div class="auth-alert dashboard-alert">
+      Code me mistakes mili — detailed mistake notes save ho gaye.
+    </div>
+  <% } %>
+
+  <% if (safeResult) { %>
     <section class="dashboard-grid-2 analyzer-grid">
       <article class="card-glass section-card">
         <div class="section-head">
           <div>
             <p class="card-label">Analysis result</p>
-            <h2><%= result.sourceLabel %></h2>
+            <h2><%= safeResult.sourceLabel || 'AI Result' %></h2>
           </div>
-          <span class="status-chip done"><%= result.detected_topic %> • <%= result.detected_subtopic %></span>
+          <span class="status-chip done">
+            <%= safeResult.detected_topic || 'Topic' %>
+            <% if (safeResult.detected_subtopic) { %>
+              • <%= safeResult.detected_subtopic %>
+            <% } %>
+          </span>
         </div>
 
         <div class="logic-list">
           <div class="logic-item">
             <h4>Summary</h4>
-            <p><%= result.summary %></p>
+            <p><%= safeResult.summary || 'Analysis completed.' %></p>
           </div>
 
           <div class="logic-item">
             <h4>Improvement tips</h4>
-            <ul class="clean-list">
-              <% result.improvement_tips.forEach((tip) => { %>
-                <li><%= tip %></li>
-              <% }) %>
-            </ul>
+            <% if (safeImprovementTips.length) { %>
+              <ul class="clean-list">
+                <% safeImprovementTips.forEach((tip) => { %>
+                  <li><%= tip %></li>
+                <% }) %>
+              </ul>
+            <% } else { %>
+              <p>No improvement tips returned.</p>
+            <% } %>
           </div>
 
           <div class="logic-item code-block-item">
             <h4>Corrected code / reviewed code</h4>
-            <pre class="code-preview"><code><%= result.corrected_code %></code></pre>
+            <pre class="code-preview"><code><%= safeResult.corrected_code || 'No reviewed code returned.' %></code></pre>
           </div>
         </div>
       </article>
@@ -148,22 +226,22 @@
           </div>
         </div>
 
-        <% if (result.mistakes?.length) { %>
+        <% if (safeMistakes.length) { %>
           <div class="feed-list">
-            <% result.mistakes.forEach((item) => { %>
+            <% safeMistakes.forEach((item) => { %>
               <article class="feed-item">
                 <div>
                   <h4><%= item.title %></h4>
                   <p><%= item.detail %></p>
                 </div>
-                <span class="severity-badge"><%= item.severity %></span>
+                <span class="severity-badge"><%= item.severity || 'medium' %></span>
               </article>
             <% }) %>
           </div>
         <% } else { %>
           <div class="empty-mini">
             <h4>No structured mistakes returned</h4>
-            <p>Try another submission or stronger model later.</p>
+            <p>Ye achha sign bhi ho sakta hai agar code correct hai, ya stronger model later try kar sakte ho.</p>
           </div>
         <% } %>
       </article>
@@ -178,17 +256,24 @@
           </div>
         </div>
 
-        <div class="feed-list">
-          <% result.smartSuggestions.nextQuestions.forEach((question) => { %>
-            <article class="feed-item">
-              <div>
-                <h4><%= question.title %></h4>
-                <p>#<%= question.id %> • <%= question.difficulty %></p>
-              </div>
-              <a href="<%= question.url %>" target="_blank" rel="noreferrer" class="task-link">Solve now</a>
-            </article>
-          <% }) %>
-        </div>
+        <% if (safeNextQuestions.length) { %>
+          <div class="feed-list">
+            <% safeNextQuestions.forEach((question) => { %>
+              <article class="feed-item">
+                <div>
+                  <h4><%= question.title %></h4>
+                  <p>#<%= question.id %> • <%= question.difficulty %></p>
+                </div>
+                <a href="<%= question.url %>" target="_blank" rel="noreferrer" class="task-link">Solve now</a>
+              </article>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="empty-mini">
+            <h4>No suggestions yet</h4>
+            <p>AI response aane ke baad yaha similar questions dikhenge.</p>
+          </div>
+        <% } %>
       </article>
 
       <article class="card-glass section-card">
@@ -199,14 +284,21 @@
           </div>
         </div>
 
-        <div class="logic-list">
-          <% result.smartSuggestions.actionCards.forEach((card) => { %>
-            <div class="logic-item">
-              <h4><%= card.title %></h4>
-              <p><%= card.text %></p>
-            </div>
-          <% }) %>
-        </div>
+        <% if (safeActionCards.length) { %>
+          <div class="logic-list">
+            <% safeActionCards.forEach((card) => { %>
+              <div class="logic-item">
+                <h4><%= card.title %></h4>
+                <p><%= card.text %></p>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="empty-mini">
+            <h4>No adaptive cards yet</h4>
+            <p>Ek analysis run karne ke baad yaha personalized next actions aayenge.</p>
+          </div>
+        <% } %>
       </article>
     </section>
   <% } %>

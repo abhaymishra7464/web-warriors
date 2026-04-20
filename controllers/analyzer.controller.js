@@ -5,6 +5,50 @@ import { getQuestionsForTopic, normalizeTopicName } from '../services/question-b
 
 const ANALYZER_CSS = '/css/dashboard.css';
 
+const buildSuccessLearningNotes = (aiResult, questionId) => {
+  const concepts = aiResult.concepts_cleared || [];
+  const suggestions = aiResult.next_questions || [];
+  const lines = [
+    `Question: ${questionId}`,
+    `Topic: ${normalizeTopicName(aiResult.detected_topic || 'Array')}`,
+    '',
+    'What you learned:',
+    aiResult.summary || 'Solution looks correct and core logic is working well.',
+    '',
+    'Concepts that became clearer:',
+    ...(concepts.length ? concepts.map((item, index) => `${index + 1}. ${item}`) : ['1. Core approach and implementation logic improved.']),
+    '',
+    'Next similar LeetCode questions:',
+    ...(suggestions.length ? suggestions.map((item, index) => `${index + 1}. ${item}`) : ['1. Practice a similar problem from the same topic.'])
+  ];
+
+  return lines.join('\n');
+};
+
+const buildMistakeLearningNotes = (aiResult, questionId) => {
+  const lines = [
+    `Question: ${questionId}`,
+    `Topic: ${normalizeTopicName(aiResult.detected_topic || 'Array')}`,
+    '',
+    'What went wrong:',
+    ...(aiResult.mistakes?.length
+      ? aiResult.mistakes.map((item, index) => `${index + 1}. ${item.title} - ${item.detail}`)
+      : ['1. Logic needs revision.']),
+    '',
+    'How to improve:',
+    ...(aiResult.improvement_tips?.length
+      ? aiResult.improvement_tips.map((item, index) => `${index + 1}. ${item}`)
+      : ['1. Re-read the approach and retry the question.']),
+    '',
+    'Suggested next questions:',
+    ...((aiResult.next_questions || []).length
+      ? aiResult.next_questions.map((item, index) => `${index + 1}. ${item}`)
+      : ['1. Solve one easier similar question from the same topic.'])
+  ];
+
+  return lines.join('\n');
+};
+
 const renderAnalyzerView = (res, payload = {}, status = 200) => {
   return res.status(status).render('analyzer/index', {
     pageTitle: 'AI Analyzer',
@@ -12,49 +56,62 @@ const renderAnalyzerView = (res, payload = {}, status = 200) => {
     formData: {
       platform: 'LeetCode',
       questionId: '',
-      problemTitle: '',
-      topicName: 'Array',
       language: 'Java',
       code: '',
       ...payload.formData
     },
     result: null,
     error: null,
+    starterQuestions: [],
     ...payload
   });
 };
 
 export const renderAnalyzer = async (req, res) => {
-  const { data: profile } = await supabase
-    .from('dsa_profiles')
-    .select('id, profile_name, language, current_level, start_topic_slug')
-    .eq('user_id', req.session.user.id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    const { data: profile } = await supabase
+      .from('dsa_profiles')
+      .select('id, profile_name, language, current_level, start_topic_slug')
+      .eq('user_id', req.session.user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  const starterTopic = normalizeTopicName(profile?.start_topic_slug || 'Array');
-  const starterQuestions = getQuestionsForTopic(starterTopic, profile?.current_level || 'Beginner', 6);
+    const starterTopic = normalizeTopicName(profile?.start_topic_slug || 'Array');
+    const starterQuestions = getQuestionsForTopic(starterTopic, profile?.current_level || 'Beginner', 6);
 
-  return renderAnalyzerView(res, {
-    formData: {
-      language: profile?.language || 'Java',
-      topicName: starterTopic
-    },
-    starterQuestions
-  });
+    return renderAnalyzerView(res, {
+      formData: {
+        language: profile?.language || 'Java'
+      },
+      starterQuestions
+    });
+  } catch (error) {
+    console.error('renderAnalyzer error:', error.message);
+    return renderAnalyzerView(res, {
+      error: error.message || 'Failed to load analyzer.',
+      starterQuestions: []
+    }, 500);
+  }
 };
 
 export const submitAnalyzer = async (req, res) => {
   try {
     const userId = req.session.user.id;
-    const { platform, questionId, problemTitle, topicName, language, code } = req.body;
-    const formData = { platform, questionId, problemTitle, topicName, language, code };
+    const { platform, questionId, language, code } = req.body;
+
+    const formData = {
+      platform: platform || 'LeetCode',
+      questionId,
+      language,
+      code
+    };
 
     if (!questionId?.trim() || !code?.trim() || !language?.trim()) {
       return renderAnalyzerView(res, {
         error: 'Question id, language and code are required.',
-        formData
+        formData,
+        starterQuestions: []
       }, 400);
     }
 
@@ -89,6 +146,10 @@ export const submitAnalyzer = async (req, res) => {
       .limit(1)
       .maybeSingle();
 
+    const guessedTopic = normalizeTopicName(
+      analytics?.weak_topic || profile?.start_topic_slug || 'Array'
+    );
+
     const { data: submission, error: submissionError } = await supabase
       .from('problem_submissions')
       .insert({
@@ -97,8 +158,8 @@ export const submitAnalyzer = async (req, res) => {
         study_plan_id: activePlan?.id || null,
         platform: platform?.trim() || 'LeetCode',
         problem_id: questionId.trim(),
-        problem_title: problemTitle?.trim() || null,
-        topic_name: normalizeTopicName(topicName),
+        problem_title: null,
+        topic_name: guessedTopic,
         language: language.trim(),
         submitted_code: code,
         user_status: 'submitted'
@@ -111,27 +172,32 @@ export const submitAnalyzer = async (req, res) => {
     }
 
     const aiResult = await analyzeWithOpenRouter({
-      questionId,
-      topicName: normalizeTopicName(topicName),
-      language,
+      questionId: questionId.trim(),
+      topicName: guessedTopic,
+      language: language.trim(),
       code,
       currentLevel: profile?.current_level || 'Beginner',
       weakTopic: analytics?.weak_topic || profile?.start_topic_slug || 'Array',
       recentMistakes: (recentMistakes || []).map((item) => item.mistake_title)
     });
 
+    const detectedTopic = normalizeTopicName(aiResult.detected_topic || guessedTopic);
+    const detectedSubtopic = aiResult.detected_subtopic || null;
+    const mistakeList = Array.isArray(aiResult.mistakes) ? aiResult.mistakes : [];
+    const isCorrectCode = mistakeList.length === 0;
+
     const { data: analysis, error: analysisError } = await supabase
       .from('ai_analyses')
       .insert({
         submission_id: submission.id,
         user_id: userId,
-        detected_topic: aiResult.detected_topic,
-        detected_subtopic: aiResult.detected_subtopic,
-        summary: aiResult.summary,
-        mistake_explanation: aiResult.mistakes.map((item) => `${item.title}: ${item.detail}`).join('\n'),
-        corrected_code: aiResult.corrected_code,
-        improvement_tips: aiResult.improvement_tips.join('\n'),
-        confidence_score: aiResult.confidence_score
+        detected_topic: detectedTopic,
+        detected_subtopic: detectedSubtopic,
+        summary: aiResult.summary || 'Analysis completed.',
+        mistake_explanation: mistakeList.map((item) => `${item.title}: ${item.detail}`).join('\n'),
+        corrected_code: aiResult.corrected_code || null,
+        improvement_tips: (aiResult.improvement_tips || []).join('\n'),
+        confidence_score: aiResult.confidence_score || 0.5
       })
       .select('id')
       .single();
@@ -141,24 +207,24 @@ export const submitAnalyzer = async (req, res) => {
     }
 
     const repeatedMap = new Map();
-    aiResult.mistakes.forEach((item) => {
-      const key = `${normalizeTopicName(aiResult.detected_topic)}-${item.title}`;
+    mistakeList.forEach((item) => {
+      const key = `${detectedTopic}-${item.title}`;
       repeatedMap.set(key, (repeatedMap.get(key) || 0) + 1);
     });
 
-    if (aiResult.mistakes.length) {
-      const logs = aiResult.mistakes.map((mistake) => ({
+    if (mistakeList.length) {
+      const logs = mistakeList.map((mistake) => ({
         user_id: userId,
         profile_id: profile?.id || null,
         submission_id: submission.id,
         analysis_id: analysis.id,
-        topic_name: normalizeTopicName(aiResult.detected_topic),
-        subtopic_name: aiResult.detected_subtopic,
+        topic_name: detectedTopic,
+        subtopic_name: detectedSubtopic,
         mistake_type: mistake.type || 'logic',
         mistake_title: mistake.title,
         mistake_detail: mistake.detail,
         severity: mistake.severity || 'medium',
-        repeated_count: repeatedMap.get(`${normalizeTopicName(aiResult.detected_topic)}-${mistake.title}`) || 1
+        repeated_count: repeatedMap.get(`${detectedTopic}-${mistake.title}`) || 1
       }));
 
       const { error: logsError } = await supabase.from('mistake_logs').insert(logs);
@@ -167,29 +233,28 @@ export const submitAnalyzer = async (req, res) => {
       }
     }
 
-    const noteContent = [
-      `Summary: ${aiResult.summary}`,
-      '',
-      'Improvement Tips:',
-      ...aiResult.improvement_tips.map((item, index) => `${index + 1}. ${item}`)
-    ].join('\n');
+    const noteContent = isCorrectCode
+      ? buildSuccessLearningNotes(aiResult, questionId.trim())
+      : buildMistakeLearningNotes(aiResult, questionId.trim());
 
     await supabase.from('notes').insert({
       user_id: userId,
       profile_id: profile?.id || null,
-      topic_name: normalizeTopicName(aiResult.detected_topic),
-      subtopic_name: aiResult.detected_subtopic,
+      topic_name: detectedTopic,
+      subtopic_name: detectedSubtopic,
       source_type: 'ai',
-      title: `${questionId.trim()} • ${normalizeTopicName(aiResult.detected_topic)} review`,
+      title: isCorrectCode
+        ? `${questionId.trim()} • learned concepts`
+        : `${questionId.trim()} • mistake review`,
       content: noteContent,
-      is_pinned: aiResult.mistakes.some((item) => item.severity === 'high')
+      is_pinned: !isCorrectCode && mistakeList.some((item) => item.severity === 'high')
     });
 
     let topicProgressQuery = supabase
       .from('topic_progress')
       .select('id, total_attempts, solved_count, weak_score, confidence_score, status')
       .eq('user_id', userId)
-      .eq('topic_name', normalizeTopicName(aiResult.detected_topic));
+      .eq('topic_name', detectedTopic);
 
     if (profile?.id) {
       topicProgressQuery = topicProgressQuery.eq('profile_id', profile.id);
@@ -197,16 +262,19 @@ export const submitAnalyzer = async (req, res) => {
 
     const { data: existingTopicProgress } = await topicProgressQuery.maybeSingle();
 
-    const weakIncrement = aiResult.mistakes.reduce((sum, item) => sum + (item.severity === 'high' ? 3 : item.severity === 'medium' ? 2 : 1), 0);
+    const weakIncrement = mistakeList.reduce((sum, item) => {
+      return sum + (item.severity === 'high' ? 3 : item.severity === 'medium' ? 2 : 1);
+    }, 0);
 
     if (existingTopicProgress?.id) {
       await supabase
         .from('topic_progress')
         .update({
           total_attempts: (existingTopicProgress.total_attempts || 0) + 1,
+          solved_count: (existingTopicProgress.solved_count || 0) + (isCorrectCode ? 1 : 0),
           weak_score: (existingTopicProgress.weak_score || 0) + weakIncrement,
           confidence_score: Math.max(0, Math.min(100, Number((aiResult.confidence_score || 0.5) * 100))),
-          status: weakIncrement >= 3 ? 'needs_revision' : 'in_progress',
+          status: isCorrectCode ? 'stronger' : weakIncrement >= 3 ? 'needs_revision' : 'in_progress',
           updated_at: new Date().toISOString()
         })
         .eq('id', existingTopicProgress.id);
@@ -214,13 +282,13 @@ export const submitAnalyzer = async (req, res) => {
       await supabase.from('topic_progress').insert({
         user_id: userId,
         profile_id: profile?.id || null,
-        topic_name: normalizeTopicName(aiResult.detected_topic),
-        subtopic_name: aiResult.detected_subtopic,
+        topic_name: detectedTopic,
+        subtopic_name: detectedSubtopic,
         total_attempts: 1,
-        solved_count: 0,
+        solved_count: isCorrectCode ? 1 : 0,
         weak_score: weakIncrement,
         confidence_score: Math.max(0, Math.min(100, Number((aiResult.confidence_score || 0.5) * 100))),
-        status: weakIncrement >= 3 ? 'needs_revision' : 'in_progress'
+        status: isCorrectCode ? 'stronger' : weakIncrement >= 3 ? 'needs_revision' : 'in_progress'
       });
     }
 
@@ -235,7 +303,7 @@ export const submitAnalyzer = async (req, res) => {
 
     const { data: existingAnalytics } = await analyticsQuery.maybeSingle();
 
-    const repeatedCount = aiResult.mistakes.filter((item) => /repeat|again|same/i.test(item.detail || '')).length;
+    const repeatedCount = mistakeList.filter((item) => /repeat|again|same/i.test(item.detail || '')).length;
 
     if (existingAnalytics?.id) {
       await supabase
@@ -243,9 +311,9 @@ export const submitAnalyzer = async (req, res) => {
         .update({
           total_problems_attempted: (existingAnalytics.total_problems_attempted || 0) + 1,
           total_analyses: (existingAnalytics.total_analyses || 0) + 1,
-          total_mistakes: (existingAnalytics.total_mistakes || 0) + aiResult.mistakes.length,
+          total_mistakes: (existingAnalytics.total_mistakes || 0) + mistakeList.length,
           repeated_mistakes: (existingAnalytics.repeated_mistakes || 0) + repeatedCount,
-          weak_topic: normalizeTopicName(aiResult.detected_topic),
+          weak_topic: detectedTopic,
           last_activity_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -256,21 +324,24 @@ export const submitAnalyzer = async (req, res) => {
         profile_id: profile?.id || null,
         total_problems_attempted: 1,
         total_analyses: 1,
-        total_mistakes: aiResult.mistakes.length,
+        total_mistakes: mistakeList.length,
         repeated_mistakes: repeatedCount,
-        weak_topic: normalizeTopicName(aiResult.detected_topic),
+        weak_topic: detectedTopic,
         streak_count: 1,
         last_activity_at: new Date().toISOString()
       });
     }
 
     const reminderPayloads = buildReminderPayloads({
-      recentMistakes: aiResult.mistakes.map((item) => ({ ...item, topic_name: normalizeTopicName(aiResult.detected_topic) })),
-      weakTopic: normalizeTopicName(aiResult.detected_topic),
+      recentMistakes: mistakeList.map((item) => ({ ...item, topic_name: detectedTopic })),
+      weakTopic: detectedTopic,
       profileId: profile?.id || null,
       userId
     });
-    await supabase.from('reminders').insert(reminderPayloads);
+
+    if (reminderPayloads?.length) {
+      await supabase.from('reminders').insert(reminderPayloads);
+    }
 
     const { data: latestMistakes } = await supabase
       .from('mistake_logs')
@@ -281,26 +352,33 @@ export const submitAnalyzer = async (req, res) => {
 
     const suggestions = buildSmartSuggestions({
       currentLevel: profile?.current_level || 'Beginner',
-      weakTopic: normalizeTopicName(aiResult.detected_topic),
-      recentMistakes: (latestMistakes || []).map((item) => ({ topic_name: item.topic_name, mistake_title: item.mistake_title })),
+      weakTopic: detectedTopic,
+      recentMistakes: (latestMistakes || []).map((item) => ({
+        topic_name: item.topic_name,
+        mistake_title: item.mistake_title
+      })),
       currentPlanTasks: [],
-      lastQuestionId: questionId
+      lastQuestionId: questionId.trim()
     });
 
     return renderAnalyzerView(res, {
       formData,
       result: {
         ...aiResult,
+        detected_topic: detectedTopic,
+        detected_subtopic: detectedSubtopic,
         smartSuggestions: suggestions,
-        sourceLabel: aiResult.source_mode === 'openrouter' ? 'OpenRouter AI' : 'Fallback Analyzer'
+        sourceLabel: aiResult.source_mode === 'openrouter' ? 'OpenRouter AI' : 'Fallback Analyzer',
+        isCorrectCode
       },
-      starterQuestions: suggestions.revisionQuestions
+      starterQuestions: suggestions?.revisionQuestions || []
     });
   } catch (error) {
     console.error('Analyzer submit error:', error.message);
     return renderAnalyzerView(res, {
       error: error.message || 'Analyzer failed right now.',
-      formData: req.body
+      formData: req.body,
+      starterQuestions: []
     }, 500);
   }
 };
